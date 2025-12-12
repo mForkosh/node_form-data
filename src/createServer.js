@@ -120,10 +120,33 @@ function createServer() {
       return;
     }
 
-    const jsonData = JSON.stringify(dataObject);
+    try {
+      await fs.access(pathToDb, fs.constants.F_OK);
+    } catch (_e) {
+      try {
+        await fs.mkdir(path.join(pathToDb, '..'), { recursive: true });
+      } catch (_err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Something went wrong');
+
+        return;
+      }
+    }
+
+    let expensesList;
 
     try {
-      await fs.writeFile(pathToDb, jsonData);
+      expensesList = JSON.parse(await fs.readFile(pathToDb));
+
+      if (!Array.isArray(expensesList)) {
+        expensesList = JSON.stringify([dataObject]);
+      } else {
+        const copyList = [...expensesList, dataObject];
+
+        expensesList = JSON.stringify(copyList);
+      }
+
+      await fs.writeFile(pathToDb, expensesList);
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end('Something went wrong');
@@ -132,8 +155,8 @@ function createServer() {
     }
 
     res.statusCode = 200;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(jsonData);
+    res.setHeader('Content-Type', 'text/html');
+    res.end(`<pre>${expensesList}</pre>`);
   });
 
   return server;
