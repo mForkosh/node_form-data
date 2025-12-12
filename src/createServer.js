@@ -121,7 +121,7 @@ function createServer() {
     }
 
     try {
-      await fs.access(pathToDb, fs.constants.F_OK);
+      await fs.access(path.join(pathToDb, '..'), fs.constants.F_OK);
     } catch (_e) {
       try {
         await fs.mkdir(path.join(pathToDb, '..'), { recursive: true });
@@ -134,20 +134,27 @@ function createServer() {
     }
 
     let expensesList;
+    let readedData = await fs.readFile(pathToDb).catch((_e) => {
+      readedData = `[]`;
+    });
 
     try {
-      expensesList = JSON.parse(await fs.readFile(pathToDb));
+      expensesList = JSON.parse(readedData);
 
       if (!Array.isArray(expensesList)) {
-        expensesList = JSON.stringify([dataObject]);
+        expensesList = JSON.stringify([dataObject], null, 2);
       } else {
         const copyList = [...expensesList, dataObject];
 
-        expensesList = JSON.stringify(copyList);
+        expensesList = JSON.stringify(copyList, null, 2);
       }
-
-      await fs.writeFile(pathToDb, expensesList);
     } catch (err) {
+      expensesList = JSON.stringify([dataObject], null, 2);
+    }
+
+    try {
+      await fs.writeFile(pathToDb, expensesList);
+    } catch (_er) {
       res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end('Something went wrong');
 
